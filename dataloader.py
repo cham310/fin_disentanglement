@@ -26,15 +26,13 @@ class DailyStockPrice(Dataset):
 			self.generate_data()
 		self.load_data()
 
-	def generate_data(self):
+	def generate_data(self, rtn_gap):
 		print("No pickle found. Start to generate pickle.")
 		# 데이터 로딩해서 수익률 형태로 변환
 		# 추후에 원데이터 넣는다면 여기서 코드 바꿔야 함
-		self.codes = ['065450', '013810', '005870', '010820', '003570', '119500', '103140', '012450', \
-				 '047810', '079550']
-		self.names = ['빅텍', '스페코', '휴니드', '퍼스텍', 'S&T중공업', '포메탈', '풍산', '한화에어로스페이스', \
-				 '한국항공우주', 'LIG넥스원']
-		self.start = '2000-01-01'
+		self.codes = ['065450','013810','005870','010820','003570','012450', 'ks']
+		self.names = ['빅텍', '스페코','휴니드', '퍼스텍', 'S&T중공업', '한화에어로스페이스','KOSPI']
+		self.start = '2005-01-01'
 
 		dfList = []
 		for code in self.codes:
@@ -49,10 +47,11 @@ class DailyStockPrice(Dataset):
 
 		merged = reduce(lambda x, y: pd.merge(x, y, how='outer', on='Date'), dfList)
 		merged = merged.set_index('Date')
-		merged = merged.sort_index()
-		merged = merged[self.start:]  # 원데이터
+		merged = merged.sort_index() # 원데이터
+		merged = merged[self.start:]  
 
 		rtn = np.log(merged / merged.shift(1)) * 100  # 수익률 계산
+# 		rtn['y'] = np.log(merged['ks'] / merged['ks'].shift(rtn_gap)) * 100 # rtn_gap 기간의 kospi 누적 수익률을 tagging
 		rtn = rtn.dropna()
 		train_data, test_data = train_test_split(rtn.values, test_size=0.1)
 		with open(os.path.join(self.data_dir, 'train.pkl'), 'wb') as f:
