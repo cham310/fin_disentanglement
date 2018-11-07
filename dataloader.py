@@ -7,6 +7,7 @@ from datetime import datetime
 from datetime import timedelta
 from functools import reduce
 from sklearn.model_selection import train_test_split
+import torch
 from torch.utils.data import Dataset, DataLoader
 
 
@@ -23,7 +24,7 @@ class DailyStockPrice(Dataset):
 
     def __init__(self, data_dir, train=True, transform=None):
         self.data_dir = data_dir
-        self.mode = 'train' if train else 'val'
+        self.mode = 'train' if train else 'test'
         self.transform = transform
         self.file_dir = os.path.join(self.data_dir, '{}.pkl'.format(self.mode))
         if not os.path.isfile(self.file_dir):
@@ -59,7 +60,7 @@ class DailyStockPrice(Dataset):
         rtn = rtn.dropna()
         print('전체 시계열 데이터 수:'+str(rtn.shape[0]))
 
-        temp1, temp2 = train_test_split(rtn.values, test_size=0.1)
+        temp1, temp2 = train_test_split(rtn.values, test_size=0.1, seed=0)
 
         # train_set
         self.trainset = []
@@ -86,28 +87,33 @@ class DailyStockPrice(Dataset):
 
     def load_data(self):
         with open(self.file_dir, 'rb') as f:
-            data, label = pkl.load(f)
+            self.data, self.label = pkl.load(f)
+        self.minv = min(self.label)
+        self.maxv = max(self.label)
+        print(self.maxv - self.minv)
         print("Data loaded from {}".format(self.file_dir))
-        print("num of trainset:{}".format(len(label)))
+        print("num of trainset:{}".format(len(self.label)))
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        return self.data[idx], self.label[idx]
+        label = round((self.label[idx] - self.minv).item())
+        return self.data[idx], label
 
 
 if __name__ == '__main__':
     start = time()
     train_dataloader = dataloader(os.path.join(os.getcwd(), 'dataset'), 4, True)
     b = time() - start
-    print(b)
     start = time()
     sum_ = 0
     n = 0
-    # for i in train_dataloader:
+    for data, label in train_dataloader:
     #     n += 1
-    #     print(i)
+        print(data.size())
+        print(label)
+        break
     # b = time() - start
     # print(b)
     # sum_ += b
