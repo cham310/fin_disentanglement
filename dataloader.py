@@ -86,18 +86,10 @@ class DailyStockPrice(Dataset):
 		print(len(self.data))
 
 	def __len__(self):
-		if self.train:
-		    return len(self.train_data)
-		else:
-		    return len(self.test_data) 
-
-	def __getitem__(self, idx):
-		if self.train:
-		    data, target = self.train_data[idx], self.train_label[idx]
-		else:
-		    data, target = self.test_data[idx], self.test_label[idx]  
-		return data, target
-
+		return len(self.data)
+ 	def __getitem__(self, idx):
+		return self.data[idx]
+	
 if __name__ =='__main__':
 	start = time()
 	train_dataloader = dataloader(os.path.join(os.getcwd(), 'dataset'), 4, True)
