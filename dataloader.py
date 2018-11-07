@@ -81,7 +81,7 @@ class DailyStockPrice(Dataset):
 
 	def load_data(self):
 		with open(self.file_dir, 'rb') as f:
-			self.data = pkl.load(f)
+			self.data, self.label = pkl.load(f)
 		print("Data loaded from {}".format(self.file_dir))
 		print(len(self.data))
 
