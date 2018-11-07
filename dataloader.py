@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import pickle as pkl
 from time import time
-import datetime
+from datetime import datetime
 from datetime import timedelta
 from functools import reduce
 from sklearn.model_selection import train_test_split
@@ -86,10 +86,10 @@ class DailyStockPrice(Dataset):
 		print(len(self.data))
 
 	def __len__(self):
-		return len(self.data)
+		return len(self.label)
 	
 	def __getitem__(self, idx):
-		return self.data[idx]
+		return self.data[idx], self.label[idx]
 	
 if __name__ =='__main__':
 	start = time()
