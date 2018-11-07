@@ -26,13 +26,13 @@ class DailyStockPrice(Dataset):
 			self.generate_data()
 		self.load_data()
 
-	def generate_data(self, rtn_gap):
+	def generate_data(self):
 		print("No pickle found. Start to generate pickle.")
-		# 데이터 로딩해서 수익률 형태로 변환
-		# 추후에 원데이터 넣는다면 여기서 코드 바꿔야 함
+
+		# 방산주 6종목 + KOSPI 대상
 		self.codes = ['065450','013810','005870','010820','003570','012450', 'ks']
 		self.names = ['빅텍', '스페코','휴니드', '퍼스텍', 'S&T중공업', '한화에어로스페이스','KOSPI']
-		self.start = '2005-01-01'
+		self.start = '2004-01-01'
 
 		dfList = []
 		for code in self.codes:
@@ -44,20 +44,40 @@ class DailyStockPrice(Dataset):
 			price_c = pd.DataFrame({'Date': df['Date_c'], code: df['close']})
 
 			dfList.append(pd.concat([price_o, price_c], axis=0))
-
+			
+		##merged: 원데이터, rtn: 로그 수익률 
 		merged = reduce(lambda x, y: pd.merge(x, y, how='outer', on='Date'), dfList)
 		merged = merged.set_index('Date')
-		merged = merged.sort_index() # 원데이터
-		merged = merged[self.start:]  
-
+		merged = merged.sort_index() 
+		
 		rtn = np.log(merged / merged.shift(1)) * 100  # 수익률 계산
-# 		rtn['y'] = np.log(merged['ks'] / merged['ks'].shift(rtn_gap)) * 100 # rtn_gap 기간의 kospi 누적 수익률을 tagging
+		rtn = rtn[start:]
 		rtn = rtn.dropna()
-		train_data, test_data = train_test_split(rtn.values, test_size=0.1)
+		
+		temp1, temp2 = train_test_split(rtn.values, test_size = 0.2)
+
+		#train_set
+		self.trainset = []
+		self.train_data = []
+		self.train_label =[]
+		for i in range(temp1.shape[0] - 10 + 1):
+		    self.train_data.append(np.asarray(temp1[i:(i+10),:-1]))
+		    self.train_label.append(np.sum(np.asarray(temp1[i:(i+10),-1])))
+		self.trainset = (self.train_data, self.train_label)
+
+		#test_set
+		self.testset = []
+		self.test_data = []
+		self.test_label =[]
+		for i in range(temp2.shape[0] - 10 +1):            
+		    self.test_data.append(np.asarray(temp2[i:(i+10),:-1]))
+		    self.test_label.append(np.sum(np.asarray(temp2[i:(i+10),-1])))
+		self.testset = (self.test_data, self.test_label)
+		
 		with open(os.path.join(self.data_dir, 'train.pkl'), 'wb') as f:
-			pkl.dump(train_data, f, protocol=pkl.HIGHEST_PROTOCOL)
+			pkl.dump(trainset, f, protocol=pkl.HIGHEST_PROTOCOL)
 		with open(os.path.join(self.data_dir, 'test.pkl'), 'wb') as f:
-			pkl.dump(test_data, f, protocol=pkl.HIGHEST_PROTOCOL)
+			pkl.dump(testset, f, protocol=pkl.HIGHEST_PROTOCOL)
 
 	def load_data(self):
 		with open(self.file_dir, 'rb') as f:
@@ -66,10 +86,17 @@ class DailyStockPrice(Dataset):
 		print(len(self.data))
 
 	def __len__(self):
-		return len(self.data)
+		if self.train:
+		    return len(self.train_data)
+		else:
+		    return len(self.test_data) 
 
 	def __getitem__(self, idx):
-		return self.data[idx]
+		if self.train:
+		    data, target = self.train_data[idx], self.train_label[idx]
+		else:
+		    data, target = self.test_data[idx], self.test_label[idx]  
+		return data, target
 
 if __name__ =='__main__':
 	start = time()
