@@ -1,3 +1,4 @@
+import os
 import torch
 import argparse
 import datetime
@@ -7,15 +8,18 @@ def get_config():
 
     model_arg = parser.add_argument_group('Model')
     model_arg.add_argument('--project', type=str, default='fin')
-    model_arg.add_argument('--sequence-length', type=int, default=10)
-    model_arg.add_argument('--input-size', type=int, default=2)
-    model_arg.add_argument('--hidden-size', type=int, default=40)
-    model_arg.add_argument('--layers-num', type=int, default=2)
-    model_arg.add_argument('--classes-num', type=int, default=4)
+    model_arg.add_argument('--code-size', type=int, default=16)
+    model_arg.add_argument('--lstm-input', type=int, default=6)
+    model_arg.add_argument('--lstm-length', type=int, default=10)
+    model_arg.add_argument('--lstm-hidden', type=int, default=32)
+    model_arg.add_argument('--lstm-layers', type=int, default=2)
+    model_arg.add_argument('--fc-hidden', type=int, default=32)
+    model_arg.add_argument('--fc-layers', type=int, default=3)
+    model_arg.add_argument('--label-num', type=int, default=25)
 
     data_arg = parser.add_argument_group('Data')
     data_arg.add_argument('--data-directory', type=str, default=os.path.join(os.getcwd(),'dataset'), metavar='N', help='directory of data')
-    data_arg.add_argument('--dataset', type=str, default='sortofclevr3')
+    # data_arg.add_argument('--dataset', type=str, default='sortofclevr3')
 
     train_arg = parser.add_argument_group('Train')
     train_arg.add_argument('--batch-size', type=int, default=64, metavar='N', help='input batch size for training (default: 128)')
@@ -38,17 +42,13 @@ def get_config():
         torch.cuda.set_device(args.device)
         # args.device = torch.device(args.device)
 
-    config_list = [args.project, args.dataset, args.epochs, args.batch_size, args.lr, args.device,
-                   'inp', args.channel_size] + args.data_config + \
-                  ['cv', args.cv_filter, args.cv_kernel, args.cv_stride, args.cv_layer, args.cv_layernorm,
-                   'te', args.te_embedding, args.te_hidden, args.te_layer,
-                   'hp', args.hp_hidden, args.hp_layer,
-                   'gt', args.gt_hidden, args.gt_layer,
-                   'fp', args.fp_hidden, args.fp_dropout, args.fp_dropout_rate, args.fp_layer,
+    config_list = [args.project, args.batch_size, args.epochs, args.lr, args.device,
+                   args.code_size, args.lstm_input, args.lstm_length, args.lstm_hidden, args.lstm_layers,
+                   args.fc_hidden, args.fc_layers, args.label_num,
                    args.memo]
 
     args.config = '_'.join(map(str, config_list))
-    args.log = args.log_directory + args.project + '/' + args.time_stamp + args.config + '/'
+    args.log = os.path.join(args.log_directory, args.time_stamp + args.config)
     print("Config:", args.config)
 
     return args

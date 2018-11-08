@@ -1,40 +1,45 @@
 import torch
 from torch import nn
-from torch.nn import Sequential
-import torch.nn.functional as F
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, PackedSequence
-import numpy as np
 
-
-#model setting: encoder
 
 class Encoder(nn.Module):
-    def __init__(self, vocab_size):
-        super(Encoder).__init__()
-        # architecture
-        self.embed = nn.Embedding(vocab_size, EMBED_SIZE, padding_idx = PAD_IDX)
-        self.rnn = nn.GRU( # LSTM or GRU
-            input_size = EMBED_SIZE,
-            hidden_size = HIDDEN_SIZE // NUM_DIRS,
-            num_layers = NUM_LAYERS,
-            bias = True,
-            batch_first = True,
-            dropout = DROPOUT,
-            bidirectional = BIDIRECTIONAL)
-        if CUDA:
-            self = self.cuda()
+    def __init__(self, input_size, hidden_size, num_layers, output_size):
+        super(Encoder, self).__init__()
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_size, output_size)
 
-    def init_hidden(self, rnn_type): # initialize hidden states
-        h = zeros(NUM_LAYERS * NUM_DIRS, BATCH_SIZE, HIDDEN_SIZE // NUM_DIRS) # hidden states
-        if rnn_type == "LSTM":
-            c = zeros(NUM_LAYERS * NUM_DIRS, BATCH_SIZE, HIDDEN_SIZE // NUM_DIRS) # cell states
-            return (h, c)
-        return h
+    def forward(self, x):
+        out, (hn, cn) = self.lstm(x)
+        out = self.fc(hn[-1])
+        return out
 
-    def forward(self, x, mask):
-        self.hidden = self.init_hidden("GRU") # LSTM or GRU
-        x = self.embed(x)
-        x = nn.utils.rnn.pack_padded_sequence(x, mask[1], batch_first = True)
-        h, _ = self.rnn(x, self.hidden)
-        h, _ = nn.utils.rnn.pad_packed_sequence(h, batch_first = True)
-        return h
+
+class MLP(nn.Module):
+    def __init__(self, layers):
+        super(MLP, self).__init__()
+        self.layers = layers
+        net = []
+        for n, (inp, outp) in enumerate(zip(layers, layers[1:])):
+            net.append(nn.Linear(inp, outp))
+            net.append(nn.ReLU(inplace=True))
+        net = nn.ModuleList(net[:-1])
+        self.net = nn.Sequential(*net)
+        print(self.net)
+
+    def forward(self, x):
+        x = self.net(x)
+        return x
+
+
+class Decoder(nn.Module):
+    def __init__(self, input_size, hidden_size, num_layers, output_size, sequence_length):
+        super(Decoder, self).__init__()
+        self.sequence_length = sequence_length
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_size, output_size)
+
+    def forward(self, c, s):
+        x = torch.cat([c, s], 1).unsqueeze(1).expand(-1, self.sequence_length, -1)
+        out, (hn, cn) = self.lstm(x)
+        out = self.fc(out)
+        return out.squeeze(2)
