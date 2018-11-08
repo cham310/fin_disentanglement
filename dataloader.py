@@ -86,9 +86,9 @@ class DailyStockPrice(Dataset):
 
     def load_data(self):
         with open(self.file_dir, 'rb') as f:
-            data, label = pkl.load(f)
+            self.data, self.label = pkl.load(f)
         print("Data loaded from {}".format(self.file_dir))
-        print("num of trainset:{}".format(len(label)))
+        print("num of trainset:{}".format(len(self.label)))
 
     def __len__(self):
         return len(self.data)
@@ -105,11 +105,12 @@ if __name__ == '__main__':
     start = time()
     sum_ = 0
     n = 0
-    # for i in train_dataloader:
-    #     n += 1
-    #     print(i)
+    for i in train_dataloader:
+        # n += 1
+        print(i)
+        break
     # b = time() - start
     # print(b)
     # sum_ += b
     # start = time()
-    print(sum_)
+    # print(sum_)
