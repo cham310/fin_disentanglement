@@ -6,8 +6,13 @@ import model
 from utils import *
 from configuration import get_config
 import dataloader
+import numpy as np
+import torch
+from sklearn.decomposition import PCA
+
 
 args = get_config()
+
 device = args.device
 torch.manual_seed(args.seed)
 
@@ -118,17 +123,49 @@ if __name__ == '__main__':
     second_optimizer = optim.Adam([param for model in second_models.values() for param in list(model.parameters())],
                                   lr=args.lr)
     writer = SummaryWriter(args.log)
-    for epoch_idx in range(args.start_epoch, args.start_epoch + args.epochs):
+    for epoch_idx in range(args.start_epoch, args.start_epoch + args.epochs1):
         first_epoch(epoch_idx, True)
         first_epoch(epoch_idx, False)
         for model_name, model in first_models.items():
             torch.save(model.state_dict(), os.path.join(args.log, model_name))
         print('Model saved in ', args.log)
 
-    for epoch_idx in range(args.start_epoch, args.start_epoch + args.epochs):
+    for epoch_idx in range(args.start_epoch, args.start_epoch + args.epochs2):
         second_epoch(epoch_idx, True)
         second_epoch(epoch_idx, False)
         for model_name, model in second_models.items():
             torch.save(model.state_dict(), os.path.join(args.log, model_name))
         print('Model saved in ', args.log)
     writer.close()
+
+    #train data 클러스터링 확인
+    data = dataloader.DailyStockPrice(args.data_directory, train=True)
+    size = args.batch_size
+    date = []
+    s = []
+    for batch_idx, (input_data, label) in enumerate(train_loader): #여기 loader도 바꿀
+        input_data = input_data.float().to(device)
+        s_code = s_encoder(input_data).detach()
+        idx = np.asarray(data.get_date(idx=batch_idx*size, batch_size=size, mode=True))
+        for i in range(s_code.shape[0]):
+            s.append(np.asarray(s_code[i,:]))
+            date.append(idx[i])
+
+    d_s = {}
+    d_s = dict(zip(date, s))
+
+    pca = PCA(n_components=2)
+    pca.fit(np.asarray(s))
+    print(pca.explained_variance_ratio_)
+
+    # special = [2010-03-26, 2010-11-23]
+    print(max(date))
+
+    import matplotlib.pyplot as plt
+    x = pca.fit_transform(np.asarray(s))
+    print(x.shape)
+    plt.figure()
+    plt.scatter(x[:,0], x[:,1], c = 'g')
+    plt.show()
+
+

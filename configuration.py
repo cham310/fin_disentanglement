@@ -15,7 +15,7 @@ def get_config():
     model_arg.add_argument('--lstm-layers', type=int, default=2)
     model_arg.add_argument('--fc-hidden', type=int, default=32)
     model_arg.add_argument('--fc-layers', type=int, default=3)
-    model_arg.add_argument('--label-num', type=int, default=25)
+    model_arg.add_argument('--label-num', type=int, default=10)
 
     data_arg = parser.add_argument_group('Data')
     data_arg.add_argument('--data-directory', type=str, default=os.path.join(os.getcwd(),'dataset'), metavar='N', help='directory of data')
@@ -23,7 +23,8 @@ def get_config():
 
     train_arg = parser.add_argument_group('Train')
     train_arg.add_argument('--batch-size', type=int, default=64, metavar='N', help='input batch size for training (default: 128)')
-    train_arg.add_argument('--epochs', type=int, default=10, metavar='N', help='number of epochs to train (default: 10)')
+    train_arg.add_argument('--epochs1', type=int, default=10, metavar='N', help='number of first step epochs to train (default: 10)')
+    train_arg.add_argument('--epochs2', type=int, default=10, metavar='N', help='number of second step epochs to train (default: 10)')
     train_arg.add_argument('--lr', type=float, default=1e-4, metavar='N', help='learning rate (default: 2.5e-4)')
     train_arg.add_argument('--log-directory', type=str, default=os.path.join(os.getcwd(),'experiment'), metavar='N', help='log directory')
     train_arg.add_argument('--device', type=int, default=0, metavar='N', help='number of cuda')
@@ -42,7 +43,7 @@ def get_config():
         torch.cuda.set_device(args.device)
         # args.device = torch.device(args.device)
 
-    config_list = [args.project, args.batch_size, args.epochs, args.lr, args.device,
+    config_list = [args.project, args.batch_size, args.epochs1, args.epochs2, args.lr, args.device,
                    args.code_size, args.lstm_input, args.lstm_length, args.lstm_hidden, args.lstm_layers,
                    args.fc_hidden, args.fc_layers, args.label_num,
                    args.memo]

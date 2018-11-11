@@ -9,14 +9,16 @@ from functools import reduce
 import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, DataLoader
+from configuration import get_config
+from bisect import bisect
+from configuration import get_config
 
 
 def dataloader(data_directory, batch_size, is_Train):
     dataloader = DataLoader(
         DailyStockPrice(data_directory, train=is_Train),
-        batch_size=batch_size, shuffle=True)
+        batch_size=batch_size, shuffle=False)
     return dataloader
-
 
 class DailyStockPrice(Dataset):
 
@@ -58,9 +60,9 @@ class DailyStockPrice(Dataset):
         rtn = np.log(merged / merged.shift(1)) * 100  # 수익률 계산
         rtn = rtn[start:]
         rtn = rtn.dropna()
-        print('전체 시계열 데이터 수:'+str(rtn.shape[0]))
 
-        temp1, temp2 = train_test_split(rtn.values, test_size=0.1, seed = 0)
+        temp1, temp2 = train_test_split(rtn.values, test_size=0.1, random_state=0, shuffle = False)
+        self.date = rtn.index
 
         # train_set
         self.trainset = []
@@ -84,13 +86,15 @@ class DailyStockPrice(Dataset):
             pkl.dump(self.trainset, f, protocol=pkl.HIGHEST_PROTOCOL)
         with open(os.path.join(self.data_dir, 'test.pkl'), 'wb') as f:
             pkl.dump(self.testset, f, protocol=pkl.HIGHEST_PROTOCOL)
+        with open(os.path.join(self.data_dir, 'date.pkl'), 'wb') as f:
+            pkl.dump(self.date, f, protocol=pkl.HIGHEST_PROTOCOL)
 
     def load_data(self):
         with open(self.file_dir, 'rb') as f:
             self.data, self.label = pkl.load(f)
-        self.minv = min(self.label)
-        self.maxv = max(self.label)
-        print(maxv-minv)
+        self.interval = [-3, -2, -1, -0.5, 0, 0.5, 1, 2, 3]
+        # self.interval = [-3, -1, 0, 1, 3]
+
         print("Data loaded from {}".format(self.file_dir))
         print("num of trainset:{}".format(len(self.label)))
 
@@ -98,9 +102,17 @@ class DailyStockPrice(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        label = round((self.label[idx]- self.minv).item())
+        label = bisect(self.interval, self.label[idx])
         return self.data[idx], label
 
+    def get_date(self, idx, batch_size, mode): # mode가 true이면 train
+        with open(os.path.join(self.data_dir, 'date.pkl'), 'rb') as f:
+            date = pkl.load(f)
+            if mode == True:
+                start = 0
+            else: start = int(len(date)*0.9)-9
+            out = date[start+idx:start+idx+batch_size]
+        return out
 
 if __name__ == '__main__':
     start = time()
