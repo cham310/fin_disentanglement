@@ -110,7 +110,7 @@ class DailyStockPrice(Dataset):
             date = pkl.load(f)
             if mode == True:
                 start = 0
-            else: start = int(len(date)*0.9)-9
+            else: start = int(len(date)*0.9)
             out = date[start+idx:start+idx+batch_size]
         return out
 

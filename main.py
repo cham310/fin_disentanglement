@@ -100,7 +100,7 @@ def second_epoch(epoch_idx, is_train):
         discriminator_loss = F.cross_entropy(output, label)
         recon = decoder(c_code, s_code)
         reconstruction_loss = F.smooth_l1_loss(recon, input_data)
-        loss = - discriminator_loss + reconstruction_loss
+        loss = - discriminator_loss + 50 * reconstruction_loss
         if is_train:
             loss.backward()
             second_optimizer.step()
@@ -136,36 +136,64 @@ if __name__ == '__main__':
         for model_name, model in second_models.items():
             torch.save(model.state_dict(), os.path.join(args.log, model_name))
         print('Model saved in ', args.log)
-    writer.close()
+
+    data = dataloader.DailyStockPrice(args.data_directory, train=True)
 
     #train data 클러스터링 확인
-    data = dataloader.DailyStockPrice(args.data_directory, train=True)
+
     size = args.batch_size
     date = []
     s = []
+    c = []
+    l = []
     for batch_idx, (input_data, label) in enumerate(train_loader): #여기 loader도 바꿀
         input_data = input_data.float().to(device)
+        label = label.to(device)
         s_code = s_encoder(input_data).detach()
+        c_code = c_encoder(input_data).detach()
         idx = np.asarray(data.get_date(idx=batch_idx*size, batch_size=size, mode=True))
         for i in range(s_code.shape[0]):
             s.append(np.asarray(s_code[i,:]))
+            c.append(np.asarray(c_code[i,:]))
+            l.append(np.asarray(label[i]))
+            date.append(idx[i])
+    data = dataloader.DailyStockPrice(args.data_directory, train=False)
+    for batch_idx, (input_data, label) in enumerate(test_loader): #여기 loader도 바꿀
+        input_data = input_data.float().to(device)
+        label = label.to(device)
+        s_code = s_encoder(input_data).detach()
+        c_code = c_encoder(input_data).detach()
+        idx = np.asarray(data.get_date(idx=batch_idx*size, batch_size=size, mode=False))
+        for i in range(s_code.shape[0]):
+            s.append(np.asarray(s_code[i,:]))
+            c.append(np.asarray(c_code[i, :]))
+            l.append(np.asarray(label[i]))
             date.append(idx[i])
 
-    d_s = {}
-    d_s = dict(zip(date, s))
+    features1 = np.asarray(s).reshape(-1,args.code_size)
+    label1 = np.asarray(date)
+    features2 = np.asarray(c).reshape(-1,args.code_size)
+    label2 = np.asarray(l)
 
-    pca = PCA(n_components=2)
-    pca.fit(np.asarray(s))
-    print(pca.explained_variance_ratio_)
+    writer.add_embedding(features2, metadata=label2) # c_code 시장 - lable
+    # writer.add_embedding(features1, metadata=label1) # s_code 방산 - 날짜
 
-    # special = [2010-03-26, 2010-11-23]
-    print(max(date))
+    #PCA
 
-    import matplotlib.pyplot as plt
-    x = pca.fit_transform(np.asarray(s))
-    print(x.shape)
-    plt.figure()
-    plt.scatter(x[:,0], x[:,1], c = 'g')
-    plt.show()
+    # pca = PCA(n_components=2)
+    # pca.fit(np.asarray(s))
+    # print(pca.explained_variance_ratio_)
+    #
+    # # special = [2010-03-26, 2010-11-23]
+    # print(max(date))
+    #
+    # import matplotlib.pyplot as plt
+    # x = pca.fit_transform(np.asarray(s))
+    # print(x.shape)
+    # plt.figure()
+    # plt.scatter(x[:,0], x[:,1], c = 'g')
+    # plt.show()
+
+    writer.close()
 
 
