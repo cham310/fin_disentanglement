@@ -19,10 +19,16 @@ torch.manual_seed(args.seed)
 train_loader = dataloader.dataloader(args.data_directory, args.batch_size, True)
 test_loader = dataloader.dataloader(args.data_directory, args.batch_size, False)
 
-c_encoder = model.Encoder(args.lstm_input, args.lstm_hidden, args.lstm_layers, args.code_size).to(device)
+if args.model == 'lstm':
+    c_encoder = model.Encoder(args.lstm_input, args.lstm_hidden, args.lstm_layers, args.code_size).to(device)
+    s_encoder = model.Encoder(args.lstm_input, args.lstm_hidden, args.lstm_layers, args.code_size).to(device)
+    decoder = model.Decoder(args.code_size * 2, args.lstm_hidden, args.lstm_layers, args.lstm_input, args.lstm_length).to(device)
+else:
+    c_encoder = model.MLP([args.input_size] + [args.fc_hidden for i in range(args.fc_layers)] + [args.code_size]).to(device)
+    s_encoder = model.MLP([args.input_size] + [args.fc_hidden for i in range(args.fc_layers)] + [args.code_size]).to(device)
+    decoder = model.MLP([args.code_size * 2] + [args.fc_hidden for i in range(args.fc_layers)] + [args.input_size]).to(device)
+
 classifier = model.MLP([args.code_size] + [args.fc_hidden for i in range(args.fc_layers)] + [args.label_num]).to(device)
-s_encoder = model.Encoder(args.lstm_input, args.lstm_hidden, args.lstm_layers, args.code_size).to(device)
-decoder = model.Decoder(args.code_size * 2, args.lstm_hidden, args.lstm_layers, args.lstm_input, args.lstm_length).to(device)
 
 first_models = dict()
 first_models['c_encoder.pt'] = c_encoder
@@ -55,7 +61,10 @@ def first_epoch(epoch_idx, is_train):
         loader = test_loader
     for batch_idx, (input_data, label) in enumerate(loader):
         first_optimizer.zero_grad()
+        batch_size = input_data.size()[0]
         input_data = input_data.float().to(device)
+        if args.model == 'mlp':
+            input_data = input_data.view(batch_size, -1)
         label = label.to(device)
         code = c_encoder(input_data)
         output = classifier(code)
@@ -92,15 +101,23 @@ def second_epoch(epoch_idx, is_train):
         loader = test_loader
     for batch_idx, (input_data, label) in enumerate(loader):
         second_optimizer.zero_grad()
+        batch_size = input_data.size()[0]
         input_data = input_data.float().to(device)
+        if args.model == 'mlp':
+            input_data = input_data.view(batch_size, -1)
         label = label.to(device)
         c_code = c_encoder(input_data).detach()
         s_code = s_encoder(input_data)
         output = classifier(s_code)
         discriminator_loss = F.cross_entropy(output, label)
-        recon = decoder(c_code, s_code)
-        reconstruction_loss = F.smooth_l1_loss(recon, input_data)
-        loss = - discriminator_loss + 50 * reconstruction_loss
+        if args.model == 'mlp':
+            code = torch.cat([c_code, s_code], 1)
+            recon = decoder(code)
+            recon = recon.view(batch_size, -1)
+        else:
+            recon = decoder(c_code, s_code)
+        reconstruction_loss = F.mse_loss(recon, input_data)
+        loss = - 1e-3 * discriminator_loss + reconstruction_loss
         if is_train:
             loss.backward()
             second_optimizer.step()
@@ -147,7 +164,10 @@ if __name__ == '__main__':
     c = []
     l = []
     for batch_idx, (input_data, label) in enumerate(train_loader): #여기 loader도 바꿀
+        batch_size = input_data.size()[0]
         input_data = input_data.float().to(device)
+        if args.model == 'mlp':
+            input_data = input_data.view(batch_size, -1)
         label = label.to(device)
         s_code = s_encoder(input_data).detach()
         c_code = c_encoder(input_data).detach()
@@ -159,7 +179,10 @@ if __name__ == '__main__':
             date.append(idx[i])
     data = dataloader.DailyStockPrice(args.data_directory, train=False)
     for batch_idx, (input_data, label) in enumerate(test_loader): #여기 loader도 바꿀
+        batch_size = input_data.size()[0]
         input_data = input_data.float().to(device)
+        if args.model == 'mlp':
+            input_data = input_data.view(batch_size, -1)
         label = label.to(device)
         s_code = s_encoder(input_data).detach()
         c_code = c_encoder(input_data).detach()

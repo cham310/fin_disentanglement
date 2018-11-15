@@ -8,13 +8,15 @@ def get_config():
 
     model_arg = parser.add_argument_group('Model')
     model_arg.add_argument('--project', type=str, default='fin')
+    model_arg.add_argument('--model', type=str, default='lstm')
+    model_arg.add_argument('--input-size', type=int, default=60)
     model_arg.add_argument('--code-size', type=int, default=16)
     model_arg.add_argument('--lstm-input', type=int, default=6)
     model_arg.add_argument('--lstm-length', type=int, default=10)
     model_arg.add_argument('--lstm-hidden', type=int, default=32)
     model_arg.add_argument('--lstm-layers', type=int, default=2)
-    model_arg.add_argument('--fc-hidden', type=int, default=32)
-    model_arg.add_argument('--fc-layers', type=int, default=3)
+    model_arg.add_argument('--fc-hidden', type=int, default=100)
+    model_arg.add_argument('--fc-layers', type=int, default=4)
     model_arg.add_argument('--label-num', type=int, default=10)
 
     data_arg = parser.add_argument_group('Data')
@@ -43,7 +45,7 @@ def get_config():
         torch.cuda.set_device(args.device)
         # args.device = torch.device(args.device)
 
-    config_list = [args.project, args.batch_size, args.epochs1, args.epochs2, args.lr, args.device,
+    config_list = [args.project, args.model, args.batch_size, args.epochs1, args.epochs2, args.lr, args.device,
                    args.code_size, args.lstm_input, args.lstm_length, args.lstm_hidden, args.lstm_layers,
                    args.fc_hidden, args.fc_layers, args.label_num,
                    args.memo]
