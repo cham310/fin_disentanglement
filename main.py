@@ -198,25 +198,24 @@ if __name__ == '__main__':
     features2 = np.asarray(c).reshape(-1,args.code_size)
     label2 = np.asarray(l)
 
-    writer.add_embedding(features2, metadata=label2) # c_code 시장 - lable
+    #writer.add_embedding(features2, metadata=label2) # c_code 시장 - lable
     # writer.add_embedding(features1, metadata=label1) # s_code 방산 - 날짜
 
-    #PCA
-
-    # pca = PCA(n_components=2)
-    # pca.fit(np.asarray(s))
-    # print(pca.explained_variance_ratio_)
-    #
-    # # special = [2010-03-26, 2010-11-23]
-    # print(max(date))
-    #
-    # import matplotlib.pyplot as plt
-    # x = pca.fit_transform(np.asarray(s))
-    # print(x.shape)
-    # plt.figure()
-    # plt.scatter(x[:,0], x[:,1], c = 'g')
-    # plt.show()
-
     writer.close()
+    # PCA
 
+    pca = PCA(n_components=1)
+    pca.fit(np.asarray(s))
+    print(pca.explained_variance_ratio_)
+
+    import matplotlib.pyplot as plt
+    import pandas as pd
+
+    x = pca.fit_transform(np.asarray(s)).reshape(7324)
+    y = label1.reshape(7324)
+    plot = pd.Series(x, index=y)
+    plot_rolling = plot.rolling(window = 20).mean()
+    plt.plot(plot_rolling)
+    plt.show()
+    
 
