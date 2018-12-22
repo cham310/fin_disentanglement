@@ -12,10 +12,10 @@ Using this method, we disentangled topic-wise and market-wise impact on Korean s
 Accuracy of the first step(left) and loss of the second step(right).
 ![image](img/result1.png)
 
-## Embedding of Z
+## Embedding of Zs
 Embedded Zs of unstable periods(left) and of peaceful periods(right).
 ![image](img/result2.png)
 
-## Analysis of Z 
+## Analysis of Zs
 The distribution of Zs of major provocations by North Korea. 
 ![image](img/result3.png)
